@@ -1,5 +1,11 @@
-import React, { useState } from "react";
-import { StyleSheet, Text, View, TouchableOpacity } from "react-native";
+import React from "react";
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+} from "react-native";
 import Feather from "react-native-vector-icons/Feather";
 import AntDesign from "react-native-vector-icons/AntDesign";
 import moment from "moment";
@@ -7,13 +13,16 @@ import moment from "moment";
 interface Props {
   children: React.ReactNode;
   date?: Date;
-  deleteItem: (value: number) => void;
-  itemId: number;
-  setCurrentId: (value: number) => void;
+  deleteItem: any;
+  itemId: any;
+  setCurrentId?: (value: any) => void;
   color: string;
   title?: string;
   backgroundColor?: string;
   fontSize?: number;
+  showSmallCard?: number | null;
+  setShowSmallCard?: any;
+  marginTop?: number;
 }
 
 const MaxiCard = ({
@@ -26,52 +35,82 @@ const MaxiCard = ({
   title,
   backgroundColor,
   fontSize,
+  showSmallCard,
+  setShowSmallCard,
+  marginTop,
 }: Props) => {
-  const [showSmallCard, setShowSmallCard] = useState(false);
+  function handleCloseSmallCard() {
+    setShowSmallCard && setShowSmallCard(null);
+  }
 
+  function openSmallCard() {
+    setShowSmallCard &&
+      setShowSmallCard((prev: any) =>
+        prev !== null && prev === itemId ? null : itemId
+      );
+  }
+  const isSelectedItemId = showSmallCard === itemId;
   return (
     <View>
-      <View style={{ ...styles.card, backgroundColor }}>
-        <View style={styles.dateAndIconCon}>
-          {date && (
-            <Text style={{ ...styles.itemDate, color }}>
-              {moment(String(date)).format("Do MMM y")}
-            </Text>
-          )}
-          {title && (
-            <Text
-              style={{ ...styles.title, fontSize: fontSize ? fontSize : 20 }}
-            >
-              {title}
-            </Text>
-          )}
-          <TouchableOpacity onPress={() => setShowSmallCard(!showSmallCard)}>
-            <Feather name="more-vertical" size={19} color={color} />
-          </TouchableOpacity>
-        </View>
+      <View
+        style={{
+          ...styles.card,
+          backgroundColor: isSelectedItemId ? "lightgrey" : backgroundColor,
+          marginTop: marginTop ? marginTop : 0,
+        }}
+      >
+        <TouchableWithoutFeedback onPress={handleCloseSmallCard}>
+          <View style={styles.dateAndIconCon}>
+            {date && (
+              <Text style={{ ...styles.itemDate, color }}>
+                {moment(String(date)).format("ddd MMM Do")}
+              </Text>
+            )}
+            {title && (
+              <Text
+                style={{
+                  ...styles.title,
+                  color,
+                  fontSize: fontSize ? fontSize : 20,
+                }}
+              >
+                {title}
+              </Text>
+            )}
 
-        <View>
+            <TouchableOpacity onPress={openSmallCard}>
+              <Feather name="more-vertical" size={19} color={color} />
+            </TouchableOpacity>
+          </View>
+        </TouchableWithoutFeedback>
+        <TouchableWithoutFeedback onPress={handleCloseSmallCard}>
           <View>{children}</View>
-        </View>
+        </TouchableWithoutFeedback>
       </View>
-      {showSmallCard && (
+
+      {isSelectedItemId && (
         <View style={styles.smallCard}>
+          {setCurrentId && (
+            <TouchableOpacity
+              style={styles.iconCon}
+              onPress={() => {
+                setCurrentId(itemId);
+                handleCloseSmallCard();
+              }}
+            >
+              <AntDesign name="edit" size={17} color="black" />
+              <Text style={{ ...styles.label, color: "black" }}>Edit </Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
-            onPress={() => {
-              setCurrentId(itemId);
-              setShowSmallCard(false);
-            }}
-          >
-            <AntDesign name="edit" size={16} color="blue" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={{ marginTop: 30 }}
+            style={{ ...styles.iconCon }}
             onPress={() => {
               deleteItem(itemId);
-              setShowSmallCard(false);
+              handleCloseSmallCard();
             }}
           >
-            <AntDesign name="delete" size={16} color="red" />
+            <AntDesign name="delete" size={17} color="red" />
+            <Text style={styles.label}>Delete</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -86,7 +125,7 @@ const styles = StyleSheet.create({
     gap: 1,
     marginBottom: 4,
     paddingHorizontal: 10,
-    marginTop: 20,
+    // marginTop: 20,
     elevation: 2,
     paddingVertical: 10,
   },
@@ -106,14 +145,24 @@ const styles = StyleSheet.create({
     position: "absolute",
     backgroundColor: "white",
     borderWidth: 1,
-    borderColor: "gray",
-    padding: 10,
-    top: 15,
-    left: 250,
+    borderColor: "grey",
+    top: 25,
+    left: 110,
     zIndex: 10,
-    alignItems: "center",
     justifyContent: "center",
+    gap: 28,
+    paddingLeft: 10,
     height: 100,
-    width: 50,
+    width: 210,
+  },
+  iconCon: {
+    flexDirection: "row",
+    gap: 20,
+    alignItems: "center",
+  },
+
+  label: {
+    color: "red",
+    fontSize: 17,
   },
 });

@@ -1,28 +1,60 @@
-import React, { useState } from "react";
-import { StyleSheet, View, ScrollView } from "react-native";
+import React, { useEffect, useState } from "react";
+import { StyleSheet, TouchableOpacity, View, Text } from "react-native";
 import DatePickerComp from "../../DatePickerComp/DatePickerComp";
-import { useFetchExpenses } from "../../../controllers/expenseController";
 import { getMonthAndYear } from "../../../utils/utility";
 import Summarizer from "../../Summarizer/Summarizer";
+import FloatinActionButton from "../../Buttons/FloatinActionButton";
+import { useExpenseState } from "../../../utils/States/expenseState";
+import UniversalModal from "../../UniversalModal/UniversalModal";
+import InputField from "../../InputField/InputField";
+import {
+  addBirdNumber,
+  updateBirds,
+} from "../../../controllers/birdController";
+import { useToast } from "../../../controllers/toastController";
+import { useBirdState } from "../../../utils/States/birdState";
+import { useAuthState } from "../../../utils/States/authState";
+import DataLoader from "../../DataLoader/DataLoader";
 
 const BirdsManagement = () => {
   const [showPicker, setShowPicker] = useState(false);
+  const [numOfBirds, setNumOfBirds] = useState("");
+  const [showModal, setShowModal] = useState(false);
   const [date, setDate] = useState(new Date());
   const monthYearString = getMonthAndYear(date);
   const {
-    numberOfBirds,
     monthlyCostPerBird,
     monthlyCostOnAllBirds,
     dailyCostPerBird,
-    costPerCrate,
     dailyCostOnAllBirds,
-  } = useFetchExpenses(monthYearString);
+  } = useExpenseState(monthYearString);
+  const { numberOfBirds, id, birdLoading } = useBirdState(monthYearString);
+  const { setToast } = useToast();
+  const { loggedInUser } = useAuthState();
+
+  function handleSubmit() {
+    const data = {
+      numOfBirds: parseInt(numOfBirds),
+      date: date.getTime(),
+      userId: loggedInUser?.userId,
+    };
+    if (id) {
+      updateBirds(id, data, setToast);
+    } else {
+      addBirdNumber(data, setToast);
+    }
+    setShowModal(false);
+  }
+  useEffect(() => {
+    if (id) {
+      setNumOfBirds(numberOfBirds.toString());
+    } else {
+      setNumOfBirds("");
+    }
+  }, [id]);
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-    >
+    <View style={styles.container}>
       <View style={styles.datePicker}>
         <DatePickerComp
           showPicker={showPicker}
@@ -34,37 +66,72 @@ const BirdsManagement = () => {
           left={130}
         />
       </View>
-      <Summarizer
-        fontWeight="bold"
-        title="Number Of Birds"
-        value={numberOfBirds}
+      <DataLoader
+        isLoading={birdLoading}
+        isArrayEmpty={false}
+        color="grey"
+        size={50}
+      >
+        <Summarizer
+          fontWeight="bold"
+          title="Number of birds"
+          value={`${numberOfBirds}`}
+        />
+        <Summarizer
+          fontWeight="bold"
+          title="Monthly cost on all birds"
+          value={monthlyCostOnAllBirds}
+        />
+        <Summarizer
+          fontWeight="bold"
+          title="Monthly cost per bird"
+          value={monthlyCostPerBird}
+        />
+        <Summarizer
+          fontWeight="bold"
+          title="Daily cost per bird"
+          value={dailyCostPerBird}
+        />
+        <Summarizer
+          fontWeight="bold"
+          title="Daily cost on all birds"
+          value={dailyCostOnAllBirds}
+        />
+      </DataLoader>
+
+      <FloatinActionButton
+        setForm={setNumOfBirds}
+        initialState={numOfBirds}
+        setModalVisible={setShowModal}
+        color="white"
+        backgroundColor="black"
       />
-      <Summarizer
-        fontWeight="bold"
-        title="Monthly Cost On All Birds"
-        value={monthlyCostOnAllBirds}
-      />
-      <Summarizer
-        fontWeight="bold"
-        title="Monthly Cost Per Bird"
-        value={monthlyCostPerBird}
-      />
-      <Summarizer
-        fontWeight="bold"
-        title="Daily Cost Per Bird"
-        value={dailyCostPerBird}
-      />
-      <Summarizer
-        fontWeight="bold"
-        title="Daily Cost On All Birds"
-        value={dailyCostOnAllBirds}
-      />
-      <Summarizer
-        fontWeight="bold"
-        title="Cost Per Crate"
-        value={costPerCrate}
-      />
-    </ScrollView>
+      <UniversalModal
+        modalVisible={showModal}
+        setModalVisible={setShowModal}
+        height={100}
+        width={100}
+      >
+        <InputField
+          value={numOfBirds}
+          label="Number of birds"
+          type="text-field"
+          onChangeText={(value) => setNumOfBirds(value)}
+          keyboardType="numeric"
+          width={320}
+        />
+        <TouchableOpacity
+          style={{
+            ...styles.button,
+            opacity: !numOfBirds ? 0.5 : 0.9,
+          }}
+          onPress={handleSubmit}
+          disabled={!numOfBirds}
+        >
+          <Text style={styles.butText}>Submit</Text>
+        </TouchableOpacity>
+      </UniversalModal>
+    </View>
   );
 };
 
@@ -80,9 +147,19 @@ const styles = StyleSheet.create({
   contentContainer: {
     flexGrow: 1,
   },
-
   datePicker: {
     marginBottom: 20,
     right: 20,
+  },
+  button: {
+    alignSelf: "center",
+    paddingHorizontal: 40,
+    paddingVertical: 12,
+    borderRadius: 10,
+    top: 120,
+    backgroundColor: "blue",
+  },
+  butText: {
+    color: "white",
   },
 });

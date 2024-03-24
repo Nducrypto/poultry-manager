@@ -1,37 +1,30 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
-import {
-  totalExpenses,
-  useFetchExpenses,
-  rentPerMonth,
-} from "../../../controllers/expenseController";
 import DatePickerComp from "../../DatePickerComp/DatePickerComp";
 import { getMonthAndYear } from "../../../utils/utility";
-import ExpenseSummary from "./ExpenseSummary";
 import ExpenseHistory from "./ExpenseHistory";
-import FloatinActionButton from "../../Buttons/FloatinActionButton";
+import {
+  totalExpenses,
+  useExpenseState,
+} from "../../../utils/States/expenseState";
+import DataLoader from "../../DataLoader/DataLoader";
 
 interface Props {
   setUtilityTitle: (value: string) => void;
 }
 const ExpenseDetails = ({ setUtilityTitle }: Props) => {
   const [showPicker, setShowPicker] = useState(false);
-  const [selected, setselected] = useState("Summary");
   const [date, setDate] = useState(new Date());
   const monthYearString = getMonthAndYear(date);
-  const { itemCostPerMonth } = useFetchExpenses(monthYearString);
-  const monthExpenses = totalExpenses(itemCostPerMonth, rentPerMonth);
+  const { itemCostPerMonth, rentPerMonth, loadingExpense, errorMessage } =
+    useExpenseState(monthYearString);
 
-  function handleSelectTitle(title: string) {
-    setselected(title);
-  }
-  const isSummary = selected === "Summary";
-  const isHistory = selected === "History";
+  const monthExpenses = totalExpenses(itemCostPerMonth, rentPerMonth);
   return (
-    <View style={{ paddingLeft: 4, paddingRight: 4, flex: 1 }}>
+    <View style={styles.container}>
       <View style={styles.totalValueCon}>
         <View style={styles.dateAndHeaderCon}>
-          <Text style={styles.header}>Total Expenses</Text>
+          <Text style={styles.title}>Total Expenses</Text>
           <DatePickerComp
             showPicker={showPicker}
             setShowPicker={setShowPicker}
@@ -41,65 +34,45 @@ const ExpenseDetails = ({ setUtilityTitle }: Props) => {
             color="white"
           />
         </View>
-        <Text style={styles.totalValue}>
-          &#8358;{""}
-          {Intl.NumberFormat().format(monthExpenses)}
-        </Text>
+        {loadingExpense ? (
+          <Text style={styles.totalValue}>₦{""}...</Text>
+        ) : (
+          <Text style={styles.totalValue}>
+            ₦{""}
+            {Intl.NumberFormat().format(monthExpenses)}
+          </Text>
+        )}
       </View>
-      <View style={styles.sumAndHisCon}>
-        <Text
-          style={{
-            ...styles.title,
-            borderBottomWidth: isSummary ? 5 : 0,
-            borderBottomColor: "#CD853F",
-          }}
-          onPress={() => handleSelectTitle("Summary")}
-        >
-          Summary
-        </Text>
-        <Text
-          style={{
-            ...styles.title,
-            borderBottomWidth: isHistory ? 5 : 0,
-            borderBottomColor: "#CD853F",
-          }}
-          onPress={() => handleSelectTitle("History")}
-        >
-          History
-        </Text>
-      </View>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.container}>
-          {selected === "Summary" ? (
-            <ExpenseSummary
-              itemCostPerMonth={itemCostPerMonth}
-              monthYear={monthYearString}
-              setUtilityTitle={setUtilityTitle}
-            />
-          ) : (
-            <ExpenseHistory monthYear={monthYearString} />
-          )}
-        </View>
-      </ScrollView>
 
-      <FloatinActionButton
-        setForm={() => {}}
-        initialState={{}}
-        setModalVisible={() => {}}
-        color="white"
-        backgroundColor="red"
-      />
+      <ScrollView
+        style={{ width: "105%" }}
+        showsVerticalScrollIndicator={false}
+      >
+        <DataLoader
+          isLoading={loadingExpense}
+          isArrayEmpty={false}
+          color="grey"
+          size={50}
+          message="No Sales available for the month"
+          error={errorMessage}
+        >
+          <ExpenseHistory
+            itemCostPerMonth={itemCostPerMonth}
+            date={date}
+            setUtilityTitle={setUtilityTitle}
+          />
+        </DataLoader>
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    alignItems: "center",
-    marginTop: 9,
-  },
+  container: { paddingLeft: 4, paddingRight: 4, flex: 1, alignItems: "center" },
+
   totalValueCon: {
     backgroundColor: "red",
+    width: "100%",
     borderRadius: 7,
     paddingBottom: 20,
     paddingTop: 20,
@@ -121,7 +94,7 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 16,
   },
-  header: {
+  title: {
     fontSize: 14,
     color: "white",
     marginLeft: 3,
@@ -130,20 +103,8 @@ const styles = StyleSheet.create({
     fontSize: 25,
     color: "white",
     fontWeight: "600",
-    marginLeft: 70,
-    marginTop: 22,
-  },
-  sumAndHisCon: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-  },
-  title: {
-    marginTop: 10,
-    fontSize: 17,
-    fontWeight: "400",
-    width: 97,
     textAlign: "center",
-    marginBottom: 12,
+    marginTop: 22,
   },
 });
 

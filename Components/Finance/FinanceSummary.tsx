@@ -14,12 +14,15 @@ const FinanceSummary = ({ title, value, isLoss }: SummaryPros) => {
       <MiniCardComp>
         <View>
           <Text style={styles.header}>{title}</Text>
-
           <View style={styles.valueAndIconCon}>
             <Text
               style={{ ...styles.sharedValue, color: isLoss ? "red" : "black" }}
             >
-              {title !== "Profit per day" ? "" : <Text>&#8358;</Text>}
+              {title === "Daily profit" || title === "Weekly profit" ? (
+                <Text>₦</Text>
+              ) : (
+                ""
+              )}
               {Intl.NumberFormat().format(value)}
             </Text>
             <View
@@ -30,7 +33,7 @@ const FinanceSummary = ({ title, value, isLoss }: SummaryPros) => {
             >
               <AntDesign
                 name={isLoss ? "arrowdown" : "arrowup"}
-                size={20}
+                size={11}
                 color="white"
               />
             </View>
@@ -64,5 +67,9 @@ const styles = StyleSheet.create({
   },
   iconCon: {
     borderRadius: 20,
+    width: 17,
+    height: 17,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

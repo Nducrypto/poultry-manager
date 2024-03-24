@@ -4,7 +4,7 @@ import { Text, View, StyleSheet } from "react-native";
 import Toast from "react-native-toast-message";
 import { useToast } from "../../controllers/toastController";
 function CustomToast() {
-  const { text2, type, setSnackBar, isVisible } = useToast();
+  const { text2, type, setToast, isVisible } = useToast();
 
   useEffect(() => {
     if (isVisible) {
@@ -23,7 +23,7 @@ function CustomToast() {
     });
   };
   const closeToast = () => {
-    setSnackBar((prev) => ({
+    setToast((prev) => ({
       ...prev,
       isVisible: false,
       text1: "",
@@ -32,12 +32,19 @@ function CustomToast() {
     }));
   };
   const toastConfig = {
-    tomatoToast: ({ text1, text2 }: { text1: string; text2: string }) => (
-      <View style={text1 === "success" ? styles.successCon : styles.errorCon}>
-        <Text style={styles.text}>{text1}</Text>
-        <Text style={styles.text}>{text2}</Text>
-      </View>
-    ),
+    tomatoToast: ({ text1, text2 }: { text1: string; text2: string }) => {
+      const isSuccess = text1 === "success";
+      return (
+        <View style={isSuccess ? styles.successCon : styles.errorCon}>
+          <Text style={isSuccess ? styles.succText : styles.errorText}>
+            {text1}
+          </Text>
+          <Text style={isSuccess ? styles.succText : styles.errorText}>
+            {text2}
+          </Text>
+        </View>
+      );
+    },
   };
 
   if (!isVisible) {
@@ -51,20 +58,28 @@ export default CustomToast;
 
 export const styles = StyleSheet.create({
   successCon: {
-    height: 60,
+    height: 80,
     width: "95%",
     padding: 10,
-    borderRadius: 10,
-    backgroundColor: "#710193",
+    borderRadius: 7,
+    backgroundColor: "white",
+    borderWidth: 2,
+    borderColor: "grey",
+    zIndex: 20,
   },
   errorCon: {
-    height: 60,
+    height: 80,
     width: "95%",
     padding: 10,
-    borderRadius: 20,
+    borderRadius: 2,
     backgroundColor: "darkred",
   },
-  text: {
+  succText: {
+    color: "black",
+    fontWeight: "700",
+  },
+  errorText: {
     color: "white",
+    fontWeight: "700",
   },
 });

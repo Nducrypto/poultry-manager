@@ -1,13 +1,13 @@
 import { atom, useRecoilState } from "recoil";
 
-interface SnackBarState {
+interface ToastState {
   text1: string;
   text2: string;
   type: string;
   isVisible: boolean;
 }
 
-export const snackbarState = atom<SnackBarState>({
+export const toastState = atom<ToastState>({
   key: "snackbarKey",
   default: {
     text1: "",
@@ -18,10 +18,10 @@ export const snackbarState = atom<SnackBarState>({
 });
 
 export const useToast = () => {
-  const [snackBar, setSnackBar] = useRecoilState(snackbarState);
-  const { text1, text2, type, isVisible } = snackBar;
+  const [toast, setToast] = useRecoilState(toastState);
+  const { text1, text2, type, isVisible } = toast;
   return {
-    setSnackBar,
+    setToast,
     text1,
     text2,
     type,
@@ -29,12 +29,8 @@ export const useToast = () => {
   };
 };
 
-export const toastSuccess = (
-  message: string,
-  type: string,
-  setSnackBar: any
-) => {
-  setSnackBar((prev: SnackBarState) => ({
+export const toastSuccess = (message: string, type: string, setToast: any) => {
+  setToast((prev: ToastState) => ({
     ...prev,
     text2: message,
     type: type,
@@ -42,12 +38,8 @@ export const toastSuccess = (
   }));
 };
 
-export const toastFailure = (
-  message: string,
-  type: string,
-  setSnackBar: any
-) => {
-  setSnackBar((prev: SnackBarState) => ({
+export const toastFailure = (message: string, type: string, setToast: any) => {
+  setToast((prev: ToastState) => ({
     ...prev,
     text2: message,
     type: type,

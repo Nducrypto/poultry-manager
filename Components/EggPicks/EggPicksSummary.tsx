@@ -1,11 +1,11 @@
 import { StyleSheet, View } from "react-native";
 import React from "react";
-import { calculateCratesForEggs } from "../../controllers/eggPickController";
+import { calculateCratesForEggs } from "../../utils/States/eggPicksState";
 import Summarizer from "../Summarizer/Summarizer";
 
 interface Props {
-  totalPickedEggs: number;
-  totalBrokenEggs: number;
+  totalPickedEggs: any;
+  totalBrokenEggs: any;
 }
 const EggPicksSummary = ({ totalPickedEggs, totalBrokenEggs }: Props) => {
   const totalPickedInCrate = calculateCratesForEggs(totalPickedEggs);
@@ -24,6 +24,7 @@ const EggPicksSummary = ({ totalPickedEggs, totalBrokenEggs }: Props) => {
         value={totalPickedInCrate}
         fontWeight="bold"
         color="#F9429E"
+        currency={false}
       />
       <Summarizer
         title="Total broken eggs"
