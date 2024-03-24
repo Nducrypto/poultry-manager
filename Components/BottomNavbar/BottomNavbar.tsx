@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { signOut, auth } from "../../config/firebase";
+
 import { NavigationProps } from "../../utils/stackParamList";
 import Feather from "react-native-vector-icons/Feather";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
@@ -19,26 +21,39 @@ const BottomNavbar = () => {
 
   const routeData = [
     {
+      title: "Home",
+      icon: MaterialCommunityIcons,
+      name: "home",
+      size: 25,
+      color: "grey",
+    },
+    {
       title: "Finance",
       icon: MaterialCommunityIcons,
       name: "finance",
       size: 25,
+      color: "blue",
     },
     {
       title: "Settings",
       icon: Feather,
       name: "more-vertical",
       size: 25,
+      color: "blue",
     },
   ];
 
-  function handleNavigation(screen: any) {
+  async function handleNavigation(screen: any) {
+    if (screen === "Home") {
+      return;
+    }
     if (screen === "Settings") {
       setShowSettingsModal(true);
     } else if (screen === "Logout") {
-      setShowSettingsModal(false);
+      await signOut(auth);
       navigation.reset({ index: 0, routes: [{ name: "Login" }] });
-    } else {
+      setShowSettingsModal(false);
+    } else if (screen === "Finance") {
       navigation.navigate(screen);
     }
   }
@@ -58,7 +73,7 @@ const BottomNavbar = () => {
                   IconStyle={item.icon}
                   name={item.name}
                   size={item.size}
-                  color="blue"
+                  color={item.color}
                 />
                 <Text style={styles.navbarText}>{item.title}</Text>
               </TouchableOpacity>
@@ -68,7 +83,7 @@ const BottomNavbar = () => {
         keyExtractor={(item) => item.name}
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ columnGap: 230, paddingLeft: 25 }}
+        contentContainerStyle={{ columnGap: 100, paddingHorizontal: 25 }}
       />
 
       {showSettingsModal && <View style={styles.optionBackOverlay} />}

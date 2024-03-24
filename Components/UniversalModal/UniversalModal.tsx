@@ -6,7 +6,7 @@ interface Props {
   children: React.ReactNode;
   modalVisible: boolean;
   setModalVisible: (value: boolean) => void;
-  setCurrentId?: any;
+  clearId?: (value: any) => void;
   height?: number;
   width?: number;
 }
@@ -16,12 +16,13 @@ const UniversalModal = ({
   setModalVisible,
   height,
   width,
-  setCurrentId,
+  clearId,
 }: Props) => {
   function handleCloseModal() {
     setModalVisible(false);
-    setCurrentId && setCurrentId(null);
+    clearId && clearId(null);
   }
+
   return (
     <View style={styles.container}>
       <Modal
@@ -54,7 +55,6 @@ const UniversalModal = ({
 
 const styles = StyleSheet.create({
   container: {
-    // flex: 1,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#F5FCFF",

@@ -1,28 +1,28 @@
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import PieChartCom from "../../ChartDisplay/PieChartCom";
-import {
-  useFetchExpenses,
-  rentPerMonth,
-  totalCostPerItem,
-  totalExpenses,
-} from "../../../controllers/expenseController";
-import { useFetchSales } from "../../../controllers/salesController";
 import SummaryCard from "./SummaryCard";
 import { getMonthAndYear } from "../../../utils/utility";
-
+import { useSalesState } from "../../../utils/States/salesState";
+import {
+  totalCostPerItem,
+  totalExpenses,
+  useExpenseState,
+} from "../../../utils/States/expenseState";
+import Feather from "react-native-vector-icons/Feather";
+import FontAwesome from "react-native-vector-icons/FontAwesome";
+import AntDesign from "react-native-vector-icons/AntDesign";
 const Summary = () => {
-  const currentDate = new Date();
-  const currentMonthYearString = getMonthAndYear(currentDate);
-  const currentYear = currentMonthYearString.split("-")[1];
-  const { items } = useFetchExpenses(currentYear);
-  const { totalSales } = useFetchSales(currentYear);
-  const currentYearData = items;
+  const date = new Date();
+  const currentMonthYear = getMonthAndYear(date);
+  const currentYear = currentMonthYear.split("-")[1];
+  const { filteredExpense, rentPerMonth } = useExpenseState(currentYear);
+  const { totalSales, loadingSales } = useSalesState(currentYear);
+  const currentYearData = filteredExpense;
   const itemCostPerYear = totalCostPerItem(currentYearData);
-
   const annualExpenses = totalExpenses(itemCostPerYear, rentPerMonth);
   const annualProfit = totalSales > 0 ? totalSales - annualExpenses : 0;
-  const isProfitable = annualProfit > 0;
+  const checkAnnualProfit = annualProfit < 0 ? 0 : annualProfit;
 
   return (
     <View style={styles.container}>
@@ -38,19 +38,25 @@ const Summary = () => {
       >
         <View style={styles.cardContainer}>
           <SummaryCard
-            title={isProfitable ? "Profit" : "Loss"}
-            value={annualProfit}
-            iconUri="https://www.svgrepo.com/show/234299/profits-statistics.svg"
+            title={"Profit"}
+            value={checkAnnualProfit}
+            iconUri={Feather}
+            loading={loadingSales}
+            iconName="bar-chart-2"
           />
           <SummaryCard
             title="Sales"
             value={totalSales}
-            iconUri="https://www.svgrepo.com/show/430192/sales-shop-analytics.svg"
+            loading={loadingSales}
+            iconUri={FontAwesome}
+            iconName="money"
           />
           <SummaryCard
             title="Total Expenses"
             value={annualExpenses}
-            iconUri="https://www.svgrepo.com/show/279390/money-cash.svg"
+            loading={loadingSales}
+            iconUri={AntDesign}
+            iconName="export"
           />
         </View>
       </ScrollView>
@@ -59,6 +65,7 @@ const Summary = () => {
         expenses={annualExpenses}
         sales={totalSales}
         profit={annualProfit}
+        loading={loadingSales}
       />
     </View>
   );

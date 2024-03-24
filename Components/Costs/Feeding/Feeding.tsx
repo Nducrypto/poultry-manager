@@ -1,73 +1,234 @@
-import React from "react";
-import { View, Text, FlatList, StyleSheet } from "react-native";
+import React, { useState } from "react";
 import {
-  costOnFeeds,
-  useFetchExpenses,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Platform,
+  ScrollView,
+} from "react-native";
+import {
+  createExpenses,
+  deleteExpenses,
 } from "../../../controllers/expenseController";
 import { useRoute } from "@react-navigation/native";
+import DatePickerComp from "../../DatePickerComp/DatePickerComp";
+import {
+  disableButtonIfFormDataEmpty,
+  getMonthAndYear,
+} from "../../../utils/utility";
+import {
+  costOnFeeds,
+  costOnGrowerFeeds,
+  costOnLayerFeeds,
+  filterItemsByKeyAndDate,
+  useExpenseState,
+} from "../../../utils/States/expenseState";
+import MaxiCard from "../../Cards/MaxiCard";
+import FloatinActionButton from "../../Buttons/FloatinActionButton";
+import UniversalModal from "../../UniversalModal/UniversalModal";
+import InputField from "../../InputField/InputField";
+import { useToast } from "../../../controllers/toastController";
+import uuid from "react-native-uuid";
+import { useAuthState } from "../../../utils/States/authState";
+import DataLoader from "../../DataLoader/DataLoader";
 
+const initialState = {
+  price: "",
+  number: "",
+  date: new Date(),
+  title: "",
+  userId: "",
+};
 const Feeding = () => {
   const { params } = useRoute() as any;
-  const monthYear = params.monthYear;
-  const { itemCostPerMonth, allCostItem } = useFetchExpenses(monthYear);
-  const displayItem = allCostItem[monthYear];
+  const selectedTitle = params?.title;
+  const currentDate = params.date;
+  const [showPicker, setShowPicker] = useState(false);
+  const [openInputDate, setOpenInputDate] = useState(false);
+
+  const [formData, setFormData] = useState(initialState);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [showSmallCard, setShowSmallCard] = useState<number | null>(null);
+  const [newdate, setNewDate] = useState(new Date(currentDate));
+  const monthYearString = getMonthAndYear(newdate);
+  const { setToast } = useToast();
+  const { itemCostPerMonth, allExpense } = useExpenseState(monthYearString);
+  const { loggedInUser } = useAuthState();
+
+  function normalizeTitle() {
+    const sanitizedTitle = selectedTitle.replace(/\s/g, "").toLowerCase();
+    return sanitizedTitle;
+  }
+  const docName = normalizeTitle();
+
+  const displayItem = filterItemsByKeyAndDate(newdate, allExpense, docName);
+
+  const feedPriceKey = `priceOf${docName}`;
+  const itemNumber = `numOf${docName}`;
+  const defaultCount = `${docName}EntryCount`;
+  function handleCreateExpense() {
+    const { price, number, date } = formData;
+    const expenseData = {
+      title: selectedTitle,
+      userId: loggedInUser?.userId,
+      timeStamp: date.getTime(),
+      [feedPriceKey]: parseInt(price),
+      [itemNumber]: parseInt(number),
+      id: uuid.v4(),
+      [defaultCount]: 1,
+    };
+    createExpenses(docName, expenseData, setToast);
+    resetForm();
+  }
+
+  function resetForm() {
+    setFormData(initialState);
+    setModalVisible(false);
+  }
+
+  function handleDeleteExpense(id: number) {
+    deleteExpenses(docName, id, setToast);
+  }
+  function handleValueChange(value: string | number, title: string) {
+    setFormData((prev) => ({ ...prev, [title]: value }));
+  }
+
+  const handleDateChange = (event: any, selectedDate: any) => {
+    const currentDate = selectedDate || formData.date;
+    setOpenInputDate(Platform.OS === "ios");
+    setFormData((prev) => ({ ...prev, date: currentDate }));
+  };
+
+  const isGrowerFeed = selectedTitle === "Grower feed";
+  const totalCost = isGrowerFeed
+    ? costOnGrowerFeeds(itemCostPerMonth)
+    : costOnLayerFeeds(itemCostPerMonth);
+  const formDataIsEmpty = !formData.number || !formData.number;
 
   return (
     <View style={styles.container}>
-      <View style={styles.totalValueCon}>
-        <Text style={styles.totalText}>Total Cost on Feeding</Text>
-        <Text style={styles.totalValue}>
-          &#8358; {Intl.NumberFormat().format(costOnFeeds(itemCostPerMonth))}
-        </Text>
-      </View>
-      <View style={styles.historyAndDateCon}>
-        <Text style={styles.history}>History</Text>
-        <Text style={styles.month}>{monthYear}</Text>
-      </View>
-
-      <FlatList
-        data={displayItem}
-        renderItem={({ item }) => {
-          const costOfFeed = costOnFeeds(item);
-          return (
-            <View style={styles.card}>
-              <Text style={styles.date}>{String(item.date)}</Text>
-              <View style={styles.infoCon}>
-                <Text style={styles.label}>Grower Feed Cost Per Bag</Text>
-                <Text style={styles.value}>
-                  &#8358;{" "}
-                  {Intl.NumberFormat().format(item.growerFeedCostPerBag)}
-                </Text>
-              </View>
-              <View style={styles.infoCon}>
-                <Text style={styles.label}>Layer Feed Cost Per Bag</Text>
-                <Text style={styles.value}>
-                  &#8358; {Intl.NumberFormat().format(item.layerFeedCostPerBag)}
-                </Text>
-              </View>
-              <View style={styles.infoCon}>
-                <Text style={styles.label}>Number Of layer Feeds</Text>
-                <Text style={styles.value}>
-                  {Intl.NumberFormat().format(item.numOfLayerFeed)}
-                </Text>
-              </View>
-              <View style={styles.infoCon}>
-                <Text style={styles.label}>Number Of Grower Feeds</Text>
-                <Text style={styles.value}>
-                  {Intl.NumberFormat().format(item.numOfGrowerFeed)}
-                </Text>
-              </View>
-              <View style={styles.infoCon}>
-                <Text style={styles.label}>Cost Of Feeds</Text>
-                <Text style={styles.value}>
-                  &#8358; {Intl.NumberFormat().format(costOfFeed)}
-                </Text>
-              </View>
-            </View>
-          );
-        }}
+      <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 10 }}
+        style={{ marginBottom: 35 }}
+      >
+        <View style={styles.totalValueCon}>
+          <View style={styles.titleAndDateCon}>
+            <Text style={styles.title}>Total cost</Text>
+            <DatePickerComp
+              showPicker={showPicker}
+              setShowPicker={setShowPicker}
+              date={newdate}
+              setDate={setNewDate}
+              formattedDate={monthYearString}
+              color="white"
+            />
+          </View>
+          <Text style={styles.totalAmount}>
+            ₦ {Intl.NumberFormat().format(totalCost)}
+          </Text>
+        </View>
+
+        <Text style={styles.history}>History</Text>
+        <DataLoader
+          isLoading={false}
+          isArrayEmpty={displayItem.length < 1}
+          color="grey"
+          size={50}
+          message="Empty"
+        >
+          {displayItem.map((item: any, index: number) => {
+            const costOfFeed = costOnFeeds(item);
+            return (
+              <View key={index}>
+                <MaxiCard
+                  itemId={item.id}
+                  date={new Date(item.timeStamp)}
+                  color="black"
+                  deleteItem={handleDeleteExpense}
+                  backgroundColor="white"
+                  showSmallCard={showSmallCard}
+                  setShowSmallCard={setShowSmallCard}
+                  marginTop={5}
+                >
+                  <View style={styles.item}>
+                    <View>
+                      <View style={styles.infoCon}>
+                        <Text style={styles.label}>Price</Text>
+                        <Text style={styles.sharedValue}>
+                          ₦{Intl.NumberFormat().format(item[feedPriceKey])}
+                        </Text>
+                      </View>
+                      <View style={styles.infoCon}>
+                        <Text style={styles.label}>Number</Text>
+                        <Text style={styles.sharedValue}>
+                          {Intl.NumberFormat().format(item[itemNumber])}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.value}>
+                      ₦{Intl.NumberFormat().format(costOfFeed)}
+                    </Text>
+                  </View>
+                </MaxiCard>
+              </View>
+            );
+          })}
+        </DataLoader>
+
+        <UniversalModal
+          modalVisible={modalVisible}
+          setModalVisible={setModalVisible}
+          height={100}
+          width={100}
+        >
+          <Text style={styles.header}>{selectedTitle.toUpperCase()}</Text>
+          <ScrollView style={{ flex: 1 }}>
+            <InputField
+              value={formData.price}
+              label="Price"
+              type="text-field"
+              onChangeText={(value) => handleValueChange(value, "price")}
+              keyboardType="numeric"
+              width={320}
+            />
+            <InputField
+              value={formData.number}
+              label="Number"
+              type="text-field"
+              onChangeText={(value) => handleValueChange(value, "number")}
+              keyboardType="numeric"
+              width={320}
+            />
+            <InputField
+              value={formData.date}
+              label="Date"
+              type="date"
+              onChange={handleDateChange}
+              showDate={openInputDate}
+              setShowDate={setOpenInputDate}
+              width={320}
+            />
+
+            <TouchableOpacity
+              style={{
+                ...styles.button,
+                opacity: formDataIsEmpty ? 0.5 : 0.9,
+              }}
+              onPress={handleCreateExpense}
+              disabled={formDataIsEmpty}
+            >
+              <Text style={styles.butText}>Submit</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </UniversalModal>
+      </ScrollView>
+      <FloatinActionButton
+        setForm={setFormData}
+        initialState={initialState}
+        setModalVisible={setModalVisible}
+        color="white"
+        backgroundColor="red"
       />
     </View>
   );
@@ -82,53 +243,46 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
   },
   totalValueCon: {
-    backgroundColor: "red",
-    paddingLeft: 40,
-    paddingBottom: 40,
-    paddingTop: 40,
-    height: 130,
+    width: "100%",
     elevation: 10,
-    marginTop: 10,
-    borderRadius: 9,
+    backgroundColor: "red",
+    alignSelf: "center",
+    borderRadius: 7,
+    paddingTop: 20,
+    paddingBottom: 20,
+    paddingLeft: 10,
+    paddingRight: 10,
+    marginTop: 20,
+    marginBottom: 30,
   },
-  totalText: {
-    fontSize: 14,
-    fontWeight: "400",
-    color: "white",
-  },
-  totalValue: {
-    fontSize: 23,
-    fontWeight: "600",
-    color: "white",
-  },
-  historyAndDateCon: {
-    paddingBottom: 14,
+  titleAndDateCon: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 30,
-    gap: -50,
   },
-  iconAndDateCon: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
+  title: {
+    fontSize: 14,
+    color: "white",
   },
-  history: { fontSize: 18, fontWeight: "300", color: "#F400A1" },
-  month: { fontSize: 14, fontWeight: "300" },
-  card: {
-    backgroundColor: "#FBFCF8",
-    elevation: 10,
-    marginTop: 10,
-    borderRadius: 10,
-    padding: 10,
-  },
-  date: {
+  totalAmount: {
+    fontSize: 24,
+    color: "white",
     textAlign: "center",
-
-    marginBottom: 10,
+    marginTop: 25,
+  },
+  history: {
+    fontSize: 18,
+    fontWeight: "300",
+    color: "#F400A1",
+    marginTop: 10,
+  },
+  item: {
+    marginTop: 5,
+  },
+  itemLabel: {
     fontSize: 16,
-    fontWeight: "bold",
+    marginBottom: 10,
+    fontWeight: "500",
+    textAlign: "center",
   },
   infoCon: {
     flexDirection: "row",
@@ -136,9 +290,35 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   label: {
-    flex: 1,
+    fontWeight: "300",
+  },
+  sharedValue: {
+    color: "#F400A1",
+    fontSize: 15,
+    fontWeight: "500",
   },
   value: {
-    marginLeft: 10,
+    marginTop: 10,
+    color: "red",
+    fontSize: 17,
+    fontWeight: "500",
+    textAlign: "center",
+  },
+  header: {
+    marginTop: 10,
+    marginBottom: 10,
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  button: {
+    alignSelf: "center",
+    paddingHorizontal: 40,
+    paddingVertical: 12,
+    borderRadius: 10,
+    marginTop: 70,
+    backgroundColor: "red",
+  },
+  butText: {
+    color: "white",
   },
 });

@@ -5,19 +5,11 @@ import { StyleSheet, Text, View } from "react-native";
 interface Props {
   title: string;
   value: any;
-  percentage?: number;
   color?: string;
   fontWeight?: any;
   currency?: boolean;
 }
-const Summarizer = ({
-  title,
-  value,
-  color,
-  percentage,
-  fontWeight,
-  currency,
-}: Props) => {
+const Summarizer = ({ title, value, color, fontWeight, currency }: Props) => {
   return (
     <MiniCardComp>
       <View>
@@ -29,16 +21,10 @@ const Summarizer = ({
             ) : currency === false ? (
               value
             ) : (
-              <Text>&#8358; {Intl.NumberFormat().format(parseInt(value))}</Text>
+              <Text> ₦{Intl.NumberFormat().format(parseInt(value))}</Text>
             )}
           </Text>
         </View>
-
-        {percentage && (
-          <Text style={{ ...styles.itemValue, top: 4, color: "green" }}>
-            % {percentage}
-          </Text>
-        )}
       </View>
     </MiniCardComp>
   );

@@ -1,37 +1,47 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { SvgUri } from "react-native-svg";
+import IconManager from "../../IconManager/IconManager";
 
 interface Props {
   title: string;
   value: number;
   iconUri: string;
+  loading: boolean;
+  iconName: string;
 }
-const SummaryCard = ({ title, value, iconUri }: Props) => (
-  <View
-    style={[
-      styles.card,
-      {
-        backgroundColor:
-          title === "Profit"
-            ? "blue"
-            : title === "Loss"
-            ? "purple"
-            : title === "Sales"
-            ? "green"
-            : "red",
-      },
-    ]}
-  >
-    <Text style={[styles.title, { color: "white" }]}>{title}</Text>
-    <View style={styles.titleAndPriceContainer}>
-      <Text style={[styles.value, { color: "white" }]}>
-        ₦ {Intl.NumberFormat().format(value)}
-      </Text>
-      <SvgUri width={25} height={25} uri={iconUri} />
+const SummaryCard = ({ title, value, iconUri, loading, iconName }: Props) => {
+  const itemValue = loading ? 0 : value;
+  return (
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor:
+            title === "Profit"
+              ? "blue"
+              : title === "Loss"
+              ? "purple"
+              : title === "Sales"
+              ? "green"
+              : "red",
+        },
+      ]}
+    >
+      <Text style={[styles.title, { color: "white" }]}>{title}</Text>
+      <View style={styles.titleAndPriceContainer}>
+        <Text style={[styles.value, { color: "white" }]}>
+          ₦ {Intl.NumberFormat().format(itemValue)}
+        </Text>
+        <IconManager
+          IconStyle={iconUri}
+          name={iconName}
+          size={25}
+          color="white"
+        />
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 export default SummaryCard;
 

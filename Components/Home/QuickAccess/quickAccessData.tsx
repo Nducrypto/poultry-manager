@@ -18,19 +18,14 @@ export const routeText = [
     size: 18,
   },
   {
-    title: "Egg",
+    title: "Eggs",
     name: "egg",
     IconStyle: FontAwesome6,
     size: 18,
   },
+
   {
-    title: "Price",
-    name: "price-tag",
-    IconStyle: Entypo,
-    size: 18,
-  },
-  {
-    title: "Medication",
+    title: "Treatment",
     name: "first-aid",
     IconStyle: Foundation,
     size: 20,

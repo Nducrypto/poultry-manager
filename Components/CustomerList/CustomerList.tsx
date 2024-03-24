@@ -1,56 +1,67 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
-  FlatList,
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
+  ScrollView,
 } from "react-native";
-import { customerData } from "./customersData";
 import FloatinActionButton from "../Buttons/FloatinActionButton";
 import UniversalModal from "../UniversalModal/UniversalModal";
 import InputField from "../InputField/InputField";
-import MaxiCard from "../Cards/MaxiCard";
+
+import { useAuthState } from "../../utils/States/authState";
+import {
+  addNewCustomer,
+  getCustomersFromDatabase,
+} from "../../controllers/customerController";
+import {
+  searchByNameOrAddress,
+  useCustomerState,
+} from "../../utils/States/customerState";
+import { useToast } from "../../controllers/toastController";
+import { useNavigation } from "@react-navigation/native";
+import { NavigationProps } from "../../utils/stackParamList";
+import MiniCardComp from "../Cards/MiniCardComp";
+import IconManager from "../IconManager/IconManager";
+import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
+import { disableButtonIfFormDataEmpty } from "../../utils/utility";
 
 const initialState = {
-  customerName: "",
-  customerType: "",
+  name: "",
+  type: "",
   address: "",
 };
 const CustomerList = () => {
+  getCustomersFromDatabase();
   const [searchTerm, setSearchTerm] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [formData, setFormData] = useState(initialState);
-  const [currentId, setCurrentId] = useState<number | null>(null);
-
-  function filterByNameOrAddress() {
-    const closeSpaces = (str: string) => str.toLowerCase().replace(/\s/g, "");
-    const searched = closeSpaces(searchTerm);
-    const filter = customerData.filter((item) => {
-      const customerName = closeSpaces(item.customerName);
-      const address = closeSpaces(item.address);
-      return customerName.includes(searched) || address.includes(searched);
+  const { customersList } = useCustomerState();
+  const { loggedInUser } = useAuthState();
+  const { setToast } = useToast();
+  const navigation = useNavigation<NavigationProps>() as any;
+  const searchedCustomers = searchByNameOrAddress(customersList, searchTerm);
+  function handleNavigation(name: any) {
+    navigation.navigate("CustomerDetail", {
+      name,
     });
-    return filter;
   }
-  const filteredCustomers = filterByNameOrAddress();
-
   function handleChange(item: string, value: string) {
     setFormData((prev) => ({ ...prev, [item]: value }));
   }
 
-  useEffect(() => {
-    if (currentId) {
-      const findItem: any = customerData.find((item) => item.id === currentId);
-      if (findItem) {
-        setFormData(findItem);
-        setModalVisible(true);
-      }
-    }
-  }, [currentId]);
+  function handleCreateCustomer() {
+    const data = { ...formData, userId: loggedInUser?.userId };
+    addNewCustomer(data, setToast);
+    setModalVisible(false);
+  }
 
-  const display = searchTerm ? filteredCustomers : customerData;
+  const display = searchTerm ? searchedCustomers : customersList;
+
+  const formDataIsEmpty = disableButtonIfFormDataEmpty(formData);
 
   return (
     <View style={styles.container}>
@@ -62,36 +73,41 @@ const CustomerList = () => {
           onChangeText={(text) => setSearchTerm(text)}
         />
       </View>
-      <FlatList
-        data={display}
-        renderItem={({ item, index }) => (
-          <View key={index} style={styles.itemCon}>
-            <MaxiCard
-              itemId={index + 1}
-              fontSize={16}
-              title={item.customerName}
-              color="white"
-              deleteItem={() => {}}
-              setCurrentId={setCurrentId}
-              backgroundColor="white"
-            >
-              <View style={styles.item}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>
-                    {item.customerName.charAt(0)}
-                  </Text>
-                </View>
-                <View style={styles.nameAndTypeCon}>
-                  <Text style={styles.address}>{item.address}</Text>
-                  <Text style={styles.type}>{item.customerType}</Text>
-                </View>
-              </View>
-            </MaxiCard>
-          </View>
-        )}
+      <ScrollView
+        style={{ flex: 1, marginTop: 10, marginBottom: 40 }}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ marginTop: 4 }}
-      />
+      >
+        {display.map((customer, index) => (
+          <View key={index}>
+            <MiniCardComp>
+              <View style={styles.itemCon}>
+                <TouchableWithoutFeedback
+                  onPress={() => handleNavigation(customer.name)}
+                  key={index}
+                >
+                  <View style={styles.itemCon}>
+                    <View style={styles.item}>
+                      <View style={styles.avatar}>
+                        <Text style={styles.avatarText}>
+                          {customer.name.charAt(0)}
+                        </Text>
+                      </View>
+                      <Text style={styles.name}>{customer.name}</Text>
+                    </View>
+                    <IconManager
+                      IconStyle={FontAwesome6}
+                      name="greater-than"
+                      size={15}
+                      color="grey"
+                    />
+                  </View>
+                </TouchableWithoutFeedback>
+              </View>
+            </MiniCardComp>
+          </View>
+        ))}
+      </ScrollView>
+
       <FloatinActionButton
         setForm={setFormData}
         initialState={initialState}
@@ -105,19 +121,20 @@ const CustomerList = () => {
         setModalVisible={setModalVisible}
         height={100}
         width={100}
-        setCurrentId={setCurrentId}
       >
         <InputField
-          value={formData.customerName}
+          value={formData.name}
           label="Customer Name"
-          onChangeText={(value) => handleChange("customerName", value)}
+          type="text-field"
+          onChangeText={(value) => handleChange("name", value)}
           keyboardType="default"
           width={320}
         />
         <InputField
-          value={formData.customerType}
+          value={formData.type}
           label="Customer Type"
-          onChangeText={(value) => handleChange("customerType", value)}
+          type="text-field"
+          onChangeText={(value) => handleChange("type", value)}
           keyboardType="default"
           width={320}
         />
@@ -125,16 +142,21 @@ const CustomerList = () => {
         <InputField
           value={formData.address}
           label="Address"
+          type="text-field"
           onChangeText={(value) => handleChange("address", value)}
           keyboardType="default"
           width={320}
         />
 
         <TouchableOpacity
-          style={styles.saveButCon}
-          onPress={() => setModalVisible(false)}
+          style={{
+            ...styles.saveButCon,
+            opacity: formDataIsEmpty ? 0.5 : 0.9,
+          }}
+          onPress={handleCreateCustomer}
+          disabled={formDataIsEmpty}
         >
-          <Text style={styles.button}>{currentId ? "Update" : "Save"}</Text>
+          <Text style={styles.button}>Submit</Text>
         </TouchableOpacity>
       </UniversalModal>
     </View>
@@ -154,13 +176,20 @@ const styles = StyleSheet.create({
   searchInput: {
     height: 50,
     borderColor: "gray",
-    borderWidth: 2,
+    borderWidth: 1,
     borderRadius: 5,
     paddingHorizontal: 10,
   },
-  itemCon: { paddingHorizontal: 10, marginBottom: -15 },
+  itemCon: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+    alignContent: "center",
+  },
   item: {
     flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
   avatar: {
     width: 24,
@@ -169,31 +198,16 @@ const styles = StyleSheet.create({
     backgroundColor: "skyblue",
     alignItems: "center",
     justifyContent: "center",
-    top: -25,
   },
   avatarText: {
     fontSize: 10,
     fontWeight: "bold",
     color: "white",
   },
-  nameAndTypeCon: {
-    flex: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
   name: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "500",
   },
-  type: {
-    fontSize: 13,
-    color: "gray",
-  },
-  address: {
-    fontSize: 14,
-    color: "gray",
-  },
-
   saveButCon: {
     backgroundColor: "blue",
     marginTop: 100,

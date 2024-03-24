@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, TextInput, TouchableOpacity } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
 import { styles } from "./SignUp/authStyles";
@@ -8,9 +8,6 @@ interface InputWithIconProps {
   placeholder: string;
   value: string;
   onChangeText: (text: string) => void;
-  secureTextEntry?: boolean;
-  showPassword?: boolean;
-  togglePasswordVisibility?: () => void;
 }
 
 const AuthInput = ({
@@ -18,10 +15,13 @@ const AuthInput = ({
   placeholder,
   value,
   onChangeText,
-  secureTextEntry,
-  showPassword,
-  togglePasswordVisibility,
 }: InputWithIconProps) => {
+  const [showPassword, setShowPassword] = useState(false);
+
+  function togglePasswordVisibility() {
+    setShowPassword((prev) => !prev);
+  }
+
   return (
     <View style={styles.inputContainer}>
       <Icon name={iconName} size={20} color="#888" />
@@ -30,10 +30,14 @@ const AuthInput = ({
         value={value}
         placeholder={placeholder}
         onChangeText={onChangeText}
-        secureTextEntry={secureTextEntry}
+        secureTextEntry={
+          placeholder === "Password" || placeholder === "Confirm Password"
+            ? !showPassword
+            : false
+        }
       />
       {iconName === "lock" && (
-        <TouchableOpacity onPress={togglePasswordVisibility}>
+        <TouchableOpacity onPress={() => togglePasswordVisibility()}>
           <Icon
             name={showPassword ? "eye" : "eye-slash"}
             size={20}

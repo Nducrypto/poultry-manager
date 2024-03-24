@@ -15,6 +15,8 @@ type RootStackParamList = {
   Birds: undefined;
   Login: undefined;
   SignUp: undefined;
+  ForgotPassword: undefined;
+  CustomerDetail: undefined;
 };
 
 export default RootStackParamList;

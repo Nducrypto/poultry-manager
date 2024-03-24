@@ -1,72 +1,93 @@
-import { useState, useEffect } from "react";
-import { salesData, SalesProp } from "../Components/Sales/salesData";
-import { getMonthAndYear } from "../utils/utility";
+import { useEffect } from "react";
+import {
+  createInDatabase,
+  removeInDatabase,
+  updateInDatabase,
+} from "../utils/api";
+import { collection, firestore, onSnapshot } from "../config/firebase";
+import { SALEROUTE } from "@env";
+import { SalesProps, useSalesState } from "../utils/States/salesState";
+import { toastFailure, toastSuccess } from "./toastController";
+import { useAuthState } from "../utils/States/authState";
 
-export interface AllSales {
-  monthlySales: Record<string, SalesProp[]>;
-  annualSales: Record<string, SalesProp[]>;
-}
-export function useFetchSales(month: any) {
-  const [allSales, setAllSales] = useState<SalesProp[]>([]);
-
-  useEffect(() => {
-    const groupedSalesByMonth: Record<string, SalesProp[]> = {};
-    const groupedByYear: Record<string, SalesProp[]> = {};
-
-    for (const sale of salesData) {
-      const monthYear = getMonthAndYear(sale.date);
-      const [, year] = monthYear.split("-");
-      if (!groupedSalesByMonth[monthYear]) {
-        groupedSalesByMonth[monthYear] = [];
-      }
-      if (!groupedByYear[year]) {
-        groupedByYear[year] = [];
-      }
-      groupedSalesByMonth[monthYear].push(sale);
-      groupedByYear[year] = [...groupedByYear[year], { ...sale }];
+const salesRoute = SALEROUTE;
+export async function createSales(item: SalesProps, setToast: any) {
+  try {
+    const docId = await createInDatabase(salesRoute, item);
+    if (docId) {
+      toastSuccess("Item added successfully", "success", setToast);
     }
-    const isMonth = month.length > 4;
-    const sales =
-      (isMonth ? groupedSalesByMonth[month] : groupedByYear[month]) || [];
-    setAllSales(sales);
-  }, [month]);
-
-  let totalWholesaleSales = 0;
-  let wholeSalePrice = 0;
-  let totalWholeSaleCrate = 0;
-  let retailPrice = 0;
-  let totalRetailCrate = 0;
-  let totalRetailSales = 0;
-  if (allSales.length) {
-    for (const sale of allSales) {
-      const currentSale = sale as SalesProp;
-      if (currentSale.customerType === "Wholesaler") {
-        wholeSalePrice = currentSale.price;
-        totalWholeSaleCrate += currentSale.numOfCrate;
-        totalWholesaleSales = wholeSalePrice * totalWholeSaleCrate;
-      } else {
-        retailPrice = currentSale.price;
-        totalRetailCrate += currentSale.numOfCrate;
-        totalRetailSales = retailPrice * totalRetailCrate;
-      }
-    }
+  } catch (error) {
+    toastFailure("Failed to send Chat ", "error", setToast);
   }
-  const totalCrates = totalWholeSaleCrate + totalRetailCrate;
-  const totalSales = totalRetailSales + totalWholesaleSales;
-
-  return {
-    allSales,
-    totalCrates,
-    totalSales,
-    setAllSales,
-  };
 }
 
 export const filterByCustomerId = (
-  sales: Record<string, SalesProp[]>,
+  sales: Record<string, SalesProps[]>,
   key: string,
-  id: number
+  id: string
 ) => ({
   ...sales,
-  [key]: sales[key].filter((item: SalesProp) => item.id !== id),
+  [key]: sales[key].filter((item: SalesProps) => item.salesId !== id),
 });
+
+export const getSalesFromDatabase = () => {
+  const { setSalesState } = useSalesState("");
+  const { loggedInUser } = useAuthState();
+  useEffect(() => {
+    setSalesState((prev) => ({ ...prev, loadingSales: true }));
+    const listenForChangeInChats = onSnapshot(
+      collection(firestore, salesRoute),
+      (snapshot) => {
+        try {
+          let fetchedData: SalesProps[] = [];
+          snapshot.forEach((doc) => {
+            const data = doc.data() as SalesProps;
+            if (data && data?.userId === loggedInUser?.userId) {
+              fetchedData.push({
+                ...data,
+                salesId: doc.id,
+                date: new Date(data.date),
+              });
+            }
+          });
+          setSalesState((prev) => ({
+            ...prev,
+            salesList: fetchedData,
+            loadingSales: false,
+          }));
+        } catch (error) {
+          console.log(error);
+          setSalesState((prev) => ({
+            ...prev,
+            loadingSales: false,
+            errorMessage: "Oops! Something went wrong.",
+          }));
+        }
+      }
+    );
+
+    return () => {
+      listenForChangeInChats();
+    };
+  }, [setSalesState, loggedInUser]);
+};
+
+export async function updateSales(id: string, data: SalesProps, setToast: any) {
+  try {
+    const isSuccess = await updateInDatabase(id, data, salesRoute);
+    if (isSuccess) {
+      toastSuccess("Sales updated successfully", "success", setToast);
+    }
+  } catch (error) {
+    toastFailure("Oops! Failed to update sales", "error", setToast);
+  }
+}
+export async function deleteSales(id: string, setToast: any) {
+  try {
+    await removeInDatabase(salesRoute, id);
+    toastSuccess("Sales deleted successfully", "success", setToast);
+  } catch (error) {
+    toastFailure("Failed to delete sales", "error", setToast);
+  }
+}

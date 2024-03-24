@@ -13,12 +13,20 @@ export const monthArray = [
   "December",
 ];
 
-export function getMonthAndYear(date: any) {
+export function getMonthAndYear(date: Date) {
   const month = date.getMonth();
   const year = date.getFullYear();
 
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const weeks = Math.ceil(daysInMonth / 7);
   const monthYear = `${monthArray[month]}-${year}`;
+  const monthYearString = String(monthYear);
   return String(monthYear);
 }
 
-export const numberOfBirds = 475;
+export function disableButtonIfFormDataEmpty(formData: any) {
+  const isButtonDisabled = Object.values(formData).some(
+    (value) => value === ""
+  );
+  return isButtonDisabled;
+}

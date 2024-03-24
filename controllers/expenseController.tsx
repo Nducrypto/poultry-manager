@@ -1,140 +1,122 @@
-import { expenseData, CostItem } from "../Components/Costs/expenseData";
-import { getMonthAndYear, monthArray, numberOfBirds } from "../utils/utility";
-import { useState, useEffect, useMemo } from "react";
+import { useEffect } from "react";
+import {
+  doc,
+  setDoc,
+  collection,
+  firestore,
+  getDoc,
+  onSnapshot,
+  updateDoc,
+} from "../config/firebase";
+import { EXPENSEROUTE } from "@env";
+import {
+  ExpenseProps,
+  ExpenseState,
+  useExpenseState,
+} from "../utils/States/expenseState";
+import { toastFailure, toastSuccess } from "./toastController";
+import { useAuthState } from "../utils/States/authState";
 
-interface AllCost {
-  groupedItems: Record<string, CostItem[]>;
-  allItems: any;
-}
-export function useFetchExpenses(dateString: string) {
-  const [allCost, setAllCost] = useState<AllCost>({
-    groupedItems: {},
-    allItems: [],
-  });
+const route = EXPENSEROUTE;
 
-  const groupDataByMonth: Record<string, CostItem[]> = {};
+export const createExpenses = async (
+  docName: string,
+  data: any,
+  setToast: any
+) => {
+  try {
+    const { docSnap, docRef } = await doesDocumentExist(route, docName);
+    if (docSnap?.exists()) {
+      await setDoc(
+        docRef,
+        { [docName]: [...docSnap.data()[docName], data] },
+        { merge: true }
+      );
+    } else {
+      await setDoc(docRef, { [docName]: [data] });
+    }
+    toastSuccess("Item added successfully", "success", setToast);
+  } catch (error) {
+    console.error("Error adding document: ", error);
+    toastFailure("Failed to add feeding ", "error", setToast);
+  }
+};
+
+export const fetchExpenseFromDatabase = () => {
+  const { setExpenseState } = useExpenseState("");
+  const { loggedInUser } = useAuthState();
   useEffect(() => {
-    for (const data of expenseData) {
-      const item = data as any;
-      const monthYear: string = getMonthAndYear(item.date);
-      if (!groupDataByMonth[monthYear]) {
-        groupDataByMonth[monthYear] = [];
-      }
-      groupDataByMonth[monthYear].push(item);
+    if (!loggedInUser || !loggedInUser.userId) {
+      return;
     }
-    setAllCost({ groupedItems: groupDataByMonth, allItems: [...expenseData] });
-  }, []);
-  const { groupedItems, allItems } = allCost;
+    setExpenseState((prev: ExpenseState) => ({
+      ...prev,
+      loadingExpense: true,
+    }));
+    const listenForChangeInChats = onSnapshot(
+      collection(firestore, route),
+      (snapshot) => {
+        try {
+          let fetchedData: { [key: string]: ExpenseProps | any } = {};
+          snapshot.forEach((doc) => {
+            const data = doc.data() as any;
+            if (data) {
+              for (const key in data) {
+                if (key) {
+                  const array = data[key];
+                  const filteredItems = array.filter(
+                    (item: any) => item.userId === loggedInUser.userId
+                  );
+                  if (filteredItems.length > 0) {
+                    fetchedData[key] = filteredItems;
+                  }
+                }
+              }
+            }
+          });
 
-  const { monthlyCosts, yearlyCosts, items } = useMemo(() => {
-    const monthlyCosts: any = {};
-    const yearlyCosts: any = {};
-    for (const item of allItems) {
-      const monthYear = getMonthAndYear(item.date);
-      const dateParts = monthYear.split("-");
-      const year = dateParts[1];
-
-      if (!monthlyCosts[monthYear]) {
-        monthlyCosts[monthYear] = { monthYear, totalCosts: { ...item } };
-      } else {
-        for (const key in item) {
-          if (
-            key !== "date" &&
-            key !== "growerFeedCostPerBag" &&
-            key !== "layerFeedCostPerBag"
-          ) {
-            monthlyCosts[monthYear].totalCosts[key] =
-              (monthlyCosts[monthYear].totalCosts[key] || 0) + item[key];
-          }
+          setExpenseState({ allExpense: fetchedData, loadingExpense: false });
+        } catch (error) {
+          setExpenseState((prev: ExpenseState) => ({
+            ...prev,
+            loadingExpense: false,
+            errorMessage: "Network request failed",
+          }));
         }
       }
+    );
 
-      if (!yearlyCosts[year]) {
-        yearlyCosts[year] = { year: year, totalCosts: { ...item } };
-      } else {
-        for (const key in item) {
-          if (
-            key !== "date" &&
-            key !== "growerFeedCostPerBag" &&
-            key !== "layerFeedCostPerBag"
-          ) {
-            yearlyCosts[year].totalCosts[key] =
-              (yearlyCosts[year].totalCosts[key] || 0) + item[key];
-          }
-        }
-      }
+    return () => {
+      listenForChangeInChats();
+    };
+  }, [loggedInUser]);
+};
+
+export const deleteExpenses = async (
+  docName: string,
+  id: number,
+  setToast: any
+) => {
+  try {
+    const { docSnap, docRef } = await doesDocumentExist(route, docName);
+    if (docSnap?.exists()) {
+      const currentData = docSnap.data()[docName];
+      const updatedData = currentData.filter((item: any) => item.id !== id);
+      await updateDoc(docRef, { [docName]: updatedData });
+      toastSuccess("Item deleted successfully", "success", setToast);
+    } else {
+      toastFailure("Document does not exist", "error", setToast);
     }
-    const isMonth = dateString.length > 4;
-    const items = isMonth ? monthlyCosts[dateString] : yearlyCosts[dateString];
+  } catch (error) {
+    toastFailure("Failed to delete item", "error", setToast);
+    throw error;
+  }
+};
 
-    return { monthlyCosts, yearlyCosts, items };
-  }, [allItems, dateString.length]);
+async function doesDocumentExist(url: string, docName: string) {
+  const collectionRef = collection(firestore, url);
+  const docRef = doc(collectionRef, docName);
+  const docSnap = await getDoc(docRef);
 
-  const expenseHistory = allItems.filter(
-    (item: CostItem | any) =>
-      monthArray[item.date.getMonth()] === dateString.split("-")[0]
-  );
-  const itemCostPerMonth = totalCostPerItem(items);
-  const monthlyCostPerBird = Math.floor(
-    totalExpenses(itemCostPerMonth, rentPerMonth) / numberOfBirds
-  );
-  const monthlyCostOnAllBirds = monthlyCostPerBird * numberOfBirds;
-  const dailyCostPerBird = monthlyCostPerBird / 30;
-  const costPerCrate = Math.floor(dailyCostPerBird * 30);
-  const dailyCostOnAllBirds = dailyCostPerBird * numberOfBirds;
-
-  return {
-    monthlyCosts,
-    yearlyCosts,
-    allCostItem: groupedItems,
-    itemCostPerMonth,
-    numberOfBirds,
-    monthlyCostPerBird,
-    monthlyCostOnAllBirds,
-    dailyCostPerBird,
-    costPerCrate,
-    dailyCostOnAllBirds,
-    expenseData,
-    items,
-    allItems,
-    expenseHistory,
-  };
+  return { docSnap, docRef };
 }
-
-export const costOnFeeds = (item: CostItem) => {
-  if (item) {
-    const growerfeed = item.growerFeedCostPerBag * item.numOfGrowerFeed;
-    const layerfeed = item.layerFeedCostPerBag * item.numOfLayerFeed;
-    const costOffeeds = growerfeed + layerfeed;
-    return costOffeeds;
-  } else {
-    return 0;
-  }
-};
-
-export const totalExpenses = (data: CostItem, rentPerMonth: number) => {
-  if (data) {
-    const { logistic, labour, electricity, medication } = data;
-    const totalCostOnFeed = costOnFeeds(data);
-    const total =
-      totalCostOnFeed +
-      logistic +
-      labour +
-      electricity +
-      rentPerMonth +
-      medication;
-
-    return total;
-  } else if (rentPerMonth) {
-    return rentPerMonth;
-  } else {
-    return 0;
-  }
-};
-
-export const totalCostPerItem = (data: any) => {
-  const totalCost = data && Object.keys(data).length > 0 ? data.totalCosts : 0;
-  return totalCost;
-};
-
-export const rentPerMonth = Math.round(200000 / 12);

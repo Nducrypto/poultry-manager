@@ -5,14 +5,19 @@ export const styles = StyleSheet.create({
     backgroundColor: "white",
     paddingLeft: 10,
     paddingRight: 10,
+    flex: 1,
+    top: 50,
   },
   image: {
     width: "100%",
-    height: "30%",
-    backgroundColor: "white",
+    height: "27%",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 20,
+  },
+  error: {
+    color: "#333",
+    fontSize: 15,
+    textAlign: "center",
   },
   heading: {
     color: "#333",
@@ -21,7 +26,6 @@ export const styles = StyleSheet.create({
   },
   formWrapper: {
     justifyContent: "center",
-    alignItems: "center",
   },
   inputContainer: {
     flexDirection: "row",
@@ -40,28 +44,33 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   button: {
-    backgroundColor: "#FF10F0",
-    paddingLeft: 60,
-    paddingBottom: 10,
-    paddingRight: 60,
-    paddingTop: 10,
-    marginTop: 20,
+    backgroundColor: "#710193",
+    paddingVertical: 13,
+    paddingHorizontal: 100,
+    marginTop: 30,
     borderRadius: 14,
+    alignSelf: "center",
   },
   buttonText: {
-    color: "#fff",
+    color: "white",
     fontSize: 16,
     fontWeight: "bold",
   },
   bottomTextCon: {
     flexDirection: "row",
+    marginTop: 25,
+    alignItems: "center",
+    alignSelf: "center",
+  },
+  forgotPassword: {
+    alignSelf: "center",
     marginTop: 10,
   },
   bottomText: {
-    fontSize: 16,
+    fontSize: 14,
   },
   link: {
     color: "blue",
-    fontSize: 16,
+    fontSize: 14,
   },
 });

@@ -1,62 +1,72 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import React, { useState } from "react";
-import { EggPickProps } from "../EggPicks/eggPicksData";
-
 import MaxiCard from "../Cards/MaxiCard";
-import { calculateCratesForEggs } from "../../controllers/eggPickController";
+import { calculateCratesForEggs } from "../../utils/States/eggPicksState";
 import SeeMoreButton from "../Buttons/SeeMoreButton";
+import { EggPicksProps } from "../../utils/States/eggPicksState";
+import DataLoader from "../DataLoader/DataLoader";
 
 interface Props {
-  eggPicksArray: any;
-  deletePickedEgg: (value: number) => void;
-  setCurrentId: (value: number) => void;
+  array: EggPicksProps[];
+  deleteItem: (value: string) => void;
+  setCurrentId: (value: string) => void;
+  loading: boolean;
 }
 const EggPicksHistory = ({
-  eggPicksArray,
-  deletePickedEgg,
+  array,
+  deleteItem,
   setCurrentId,
+  loading,
 }: Props) => {
   const [visible, setVisible] = useState<number>(10);
-  const isLastItemInArray = visible >= eggPicksArray.length;
+  const [showSmallCard, setShowSmallCard] = useState<number | null>(null);
 
+  const length = array.length;
+  const isLastItemInArray = visible >= length;
+  const isEmpty = length < 1;
   return (
     <ScrollView showsVerticalScrollIndicator={false}>
       <View style={styles.itemContainer}>
-        {eggPicksArray.length < 1 ? (
-          <Text style={styles.noPickedEggText}>No egg picked</Text>
-        ) : (
-          eggPicksArray
-            .slice(0, visible)
-            .map((item: EggPickProps, index: number) => (
-              <View key={index}>
-                <MaxiCard
-                  itemId={item.id}
-                  date={item.date}
-                  color="grey"
-                  deleteItem={deletePickedEgg}
-                  setCurrentId={setCurrentId}
-                  backgroundColor="white"
-                >
-                  <View style={styles.row}>
-                    <View style={styles.column}>
-                      <Text style={styles.value}>{item.numOfEggs}</Text>
-                      <Text style={styles.label}>Eggs</Text>
-                    </View>
-                  </View>
+        <DataLoader
+          isLoading={loading}
+          isArrayEmpty={isEmpty}
+          color="#F9429E"
+          size={50}
+          message="No egg picked for the month"
+        >
+          {array.slice(0, visible).map((item: EggPicksProps, index: number) => (
+            <View key={index}>
+              <MaxiCard
+                itemId={item.id}
+                date={new Date(item.timeStamp)}
+                color="grey"
+                deleteItem={deleteItem}
+                setCurrentId={setCurrentId}
+                backgroundColor="white"
+                showSmallCard={showSmallCard}
+                setShowSmallCard={setShowSmallCard}
+                marginTop={5}
+              >
+                <View style={styles.row}>
                   <View style={styles.column}>
-                    <Text style={styles.value}>{item.brokenEggs}</Text>
-                    <Text style={styles.label}>
-                      Broken egg{item.brokenEggs > 1 ? "s" : ""}
-                    </Text>
+                    <Text style={styles.value}>{item.numOfEggs}</Text>
+                    <Text style={styles.label}>Eggs</Text>
                   </View>
-
-                  <Text style={styles.numOfEggsInCrate}>
-                    {calculateCratesForEggs(item.numOfEggs)}
+                </View>
+                <View style={styles.column}>
+                  <Text style={styles.value}>{item.brokenEggs}</Text>
+                  <Text style={styles.label}>
+                    Broken egg{item.brokenEggs > 1 ? "s" : ""}
                   </Text>
-                </MaxiCard>
-              </View>
-            ))
-        )}
+                </View>
+
+                <Text style={styles.numOfEggsInCrate}>
+                  {calculateCratesForEggs(item.numOfEggs)}
+                </Text>
+              </MaxiCard>
+            </View>
+          ))}
+        </DataLoader>
       </View>
       {!isLastItemInArray && (
         <SeeMoreButton value={10} setVisible={setVisible} />
