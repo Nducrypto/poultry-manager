@@ -1,6 +1,6 @@
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import PieChartCom from "../../ChartDisplay/PieChartCom";
+// import PieChartCom from "../../ChartDisplay/PieChartCom";
 import SummaryCard from "./SummaryCard";
 import { getMonthAndYear } from "../../../utils/utility";
 import { useSalesState } from "../../../utils/States/salesState";
@@ -61,12 +61,12 @@ const Summary = () => {
         </View>
       </ScrollView>
 
-      <PieChartCom
+      {/* <PieChartCom
         expenses={annualExpenses}
         sales={totalSales}
         profit={annualProfit}
         loading={loadingSales}
-      />
+      /> */}
     </View>
   );
 };

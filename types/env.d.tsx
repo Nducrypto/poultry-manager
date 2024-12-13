@@ -8,6 +8,8 @@ declare module "react-native-vector-icons/Feather";
 declare module "react-native-vector-icons/FontAwesome5";
 declare module "react-native-vector-icons/MaterialIcons";
 declare module "react-native-vector-icons/MaterialCommunityIcons";
+declare module "@react-navigation/stack";
+declare module "react-native-screens";
 
 declare module "@env" {
   export const API_KEY: string;
